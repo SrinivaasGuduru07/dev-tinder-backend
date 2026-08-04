@@ -3,7 +3,7 @@ const connectDB = require("./config/database");
 const app = express();
 const User = require("./models/user");
 const { validateSignUpData } = require("./utils/validation");
-
+const {userAuth} = require("./Middlwares/auth")
 
 const cookieParser = require('cookie-parser');
 const jwt = require("jsonwebtoken");
@@ -11,7 +11,6 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 
 app.use(express.json());
-// Use the cookie-parser middleware
 app.use(cookieParser());
 
 app.post("/signup",async (req,res)=>{
@@ -43,20 +42,14 @@ app.post("/login",async(req,res)=>{
     try{
         const{emailId,password}=req.body;
         const user = await User.findOne({emailId:emailId});
-
         if(!user){
-            
             throw new Error("Invalid credentials")
         }
-
         const isPasswordValid = await bcrypt.compare(password,user.password);
 
         if(isPasswordValid){
-
-            const token = await jwt.sign({_id:user.id},"DEVTinder@123")
-
+            const token = await jwt.sign({_id:user.id},"DEVTinder@123",{expiresIn:"1d",})
             res.cookie("token",token);
-
             res.send("Login Successful!!");
         }else{
             throw new Error("Invalid credentials")
@@ -67,40 +60,22 @@ app.post("/login",async(req,res)=>{
 }
 
 })
- app.get("/profile",async(req,res)=>{
+
+
+app.get("/profile",userAuth,async(req,res)=>{
     try{
-        
-    const cookies = req.cookies;
-    const {token} = cookies;
-
-    if(!token){
-        throw new Error("Invalid TOken");
-    }
-    //validate the token:
-    const decodedMessage = await jwt.verify(token,"DEVTinder@123");
-    console.log(decodedMessage);
-
-    const{_id} = decodedMessage;
-
-    console.log("Loggedin user is:"+_id);
-
-    const user = await User.findById(_id);
-
-    if(!user){
-        throw new Error("User not Found!!")
-    }
-
-    console.log(cookies);
-    res.send(user);
+        const user = req.user;
+        res.send(user);
     }   
-    
-    
     catch(err){
         res.status(400).send("Error saving the user:"+err.message);
     }
+})
 
- })
-
+app.post("/sendConnectionRequest",userAuth,async(req,res)=>{
+    const user = req.user;
+    res.send(user.firstName +" sent the connection request")
+})
 connectDB().then(()=>{
     console.log("Database Connected Successfully!!!");
 
@@ -112,3 +87,6 @@ connectDB().then(()=>{
 .catch((err)=>{
     console.error("Database cannot be connected!!");
 })
+
+
+
