@@ -4,6 +4,7 @@ const app = express();
 const User = require("./models/user");
 const { validateSignUpData } = require("./utils/validation");
 
+
 const cookieParser = require('cookie-parser');
 const jwt = require("jsonwebtoken");
 
@@ -52,9 +53,9 @@ app.post("/login",async(req,res)=>{
 
         if(isPasswordValid){
 
-            //const token = await jwt.sign({_id:user.id},"DEVTinder@123")
+            const token = await jwt.sign({_id:user.id},"DEVTinder@123")
 
-            res.cookie("token","some random string")
+            res.cookie("token",token);
 
             res.send("Login Successful!!");
         }else{
@@ -67,10 +68,37 @@ app.post("/login",async(req,res)=>{
 
 })
  app.get("/profile",async(req,res)=>{
+    try{
+        
     const cookies = req.cookies;
-    console.log(cookies)
+    const {token} = cookies;
 
-    res.send("Reading the cookie")
+    if(!token){
+        throw new Error("Invalid TOken");
+    }
+    //validate the token:
+    const decodedMessage = await jwt.verify(token,"DEVTinder@123");
+    console.log(decodedMessage);
+
+    const{_id} = decodedMessage;
+
+    console.log("Loggedin user is:"+_id);
+
+    const user = await User.findById(_id);
+
+    if(!user){
+        throw new Error("User not Found!!")
+    }
+
+    console.log(cookies);
+    res.send(user);
+    }   
+    
+    
+    catch(err){
+        res.status(400).send("Error saving the user:"+err.message);
+    }
+
  })
 
 connectDB().then(()=>{
