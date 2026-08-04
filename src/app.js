@@ -4,26 +4,25 @@ const app = express();
 const User = require("./models/user");
 const { validateSignUpData } = require("./utils/validation");
 
+const cookieParser = require('cookie-parser');
+const jwt = require("jsonwebtoken");
+
 const bcrypt = require("bcrypt");
 
 app.use(express.json());
+// Use the cookie-parser middleware
+app.use(cookieParser());
 
 app.post("/signup",async (req,res)=>{
 
-try{
-//validation of data.
-validateSignUpData(req);
+    try{
+    //validation of data.
+        validateSignUpData(req);
 
 //encrypt the user password.
 const{firstName,lastName,emailId,password}=req.body;
 
 const passwordHash = await bcrypt.hash(password,10);
-
-
-
-
-
-
 //creating a new instance of the User Model.
     const user = new User({firstName,lastName,emailId,password:passwordHash});
  
@@ -45,12 +44,18 @@ app.post("/login",async(req,res)=>{
         const user = await User.findOne({emailId:emailId});
 
         if(!user){
+            
             throw new Error("Invalid credentials")
         }
 
         const isPasswordValid = await bcrypt.compare(password,user.password);
 
         if(isPasswordValid){
+
+            //const token = await jwt.sign({_id:user.id},"DEVTinder@123")
+
+            res.cookie("token","some random string")
+
             res.send("Login Successful!!");
         }else{
             throw new Error("Invalid credentials")
@@ -61,7 +66,12 @@ app.post("/login",async(req,res)=>{
 }
 
 })
+ app.get("/profile",async(req,res)=>{
+    const cookies = req.cookies;
+    console.log(cookies)
 
+    res.send("Reading the cookie")
+ })
 
 connectDB().then(()=>{
     console.log("Database Connected Successfully!!!");
